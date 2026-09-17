@@ -1,18 +1,28 @@
 {
-  "name": "clinicworks",
+  "name": "clinicworks-platform",
   "version": "1.0.0",
+  "private": true,
   "description": "Clinical Document Processing Platform built on Azure, Node.js, TypeScript, Google Gemini, and PostgreSQL",
-  "main": "dist/webapp/server.js",
   "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf dist",
-    "start": "node dist/webapp/server.js",
-    "dev": "tsx watch src/webapp/server.ts",
-    "type-check": "tsc --noEmit",
-    "generate:docs": "tsx src/utils/generateSampleDocs.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "dev": "tsx watch backend/src/server.ts",
+    "dev:backend": "tsx watch backend/src/server.ts",
+    "dev:frontend": "npm run dev --workspace=@clinicworks/frontend",
+    "build": "npm run build --workspace=@clinicworks/frontend && npm run build --workspace=@clinicworks/backend",
+    "build:frontend": "npm run build --workspace=@clinicworks/frontend",
+    "build:backend": "npm run build --workspace=@clinicworks/backend",
+    "start": "node backend/dist/server.js",
+    "test": "npm run test --workspace=@clinicworks/backend",
+    "test:watch": "npm run test:watch --workspace=@clinicworks/backend",
+    "type-check": "npm run type-check --workspace=@clinicworks/backend && npm run type-check --workspace=@clinicworks/frontend",
+    "generate:docs": "tsx backend/src/utils/generateSampleDocs.ts",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "clean": "rimraf backend/dist frontend/dist dist"
   },
   "keywords": [
     "azure",
@@ -21,31 +31,14 @@
     "postgresql",
     "azure-functions",
     "logic-apps",
-    "typescript"
+    "typescript",
+    "react",
+    "vite"
   ],
   "author": "ClinicWorks Team",
   "license": "ISC",
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "multer": "^1.4.5-lts.1",
-    "pdf-lib": "^1.17.1",
-    "pg": "^8.13.3",
-    "uuid": "^11.1.0"
-  },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^22.13.9",
-    "@types/pg": "^8.11.11",
-    "@types/uuid": "^10.0.0",
-    "rimraf": "^6.0.1",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3",
-    "vitest": "^3.0.7"
+    "rimraf": "^6.0.1"
   },
   "engines": {
     "node": ">=20.0.0"
