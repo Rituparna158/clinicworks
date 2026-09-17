@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",
     
     /* Strict Type-Checking Options */
     "strict": true,
@@ -33,13 +33,13 @@
     "resolveJsonModule": true
   },
   "include": [
-    "backend/src/**/*",
-    "backend/tests/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "**/node_modules",
     "dist",
-    "**/dist"
+    "tests",
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ]
 }
