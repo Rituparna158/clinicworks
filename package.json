@@ -10,6 +10,7 @@
     "start": "node dist/webapp/server.js",
     "dev": "tsx watch src/webapp/server.ts",
     "type-check": "tsc --noEmit",
+    "generate:docs": "tsx src/utils/generateSampleDocs.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
