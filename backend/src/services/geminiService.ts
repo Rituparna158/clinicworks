@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import pdfParse from 'pdf-parse';
 import type { BloodPressureReading, HbA1cReading } from '../types/clinical.types.js';
 import type { DocumentProcessingInput, RawExtractionOutput } from '../types/extraction.types.js';
+import { isOcrConfigured, performOcrOnPdf } from './ocrService.js';
 
 dotenv.config();
 
@@ -66,6 +68,30 @@ export async function extractClinicalData(input: DocumentProcessingInput): Promi
   const { fileName, fileBuffer, mimeType } = input;
   const resolvedMime = resolveMimeType(fileName, mimeType);
 
+  let extractedText = '';
+  let ocrMethod = 'multimodal-vision';
+
+  if (resolvedMime === 'application/pdf') {
+    try {
+      const parsed = await pdfParse(fileBuffer);
+      extractedText = (parsed.text || '').trim();
+      ocrMethod = 'pdf-parse';
+    } catch {
+      // ignore local parse failure
+    }
+
+    if ((!extractedText || extractedText.length < 20) && isOcrConfigured()) {
+      try {
+        console.log(`[OCR] Scanned or image-based PDF detected for "${fileName}". Triggering Azure Document Intelligence OCR...`);
+        extractedText = await performOcrOnPdf(fileBuffer);
+        ocrMethod = 'azure-document-intelligence';
+        console.log(`[OCR] Azure Document Intelligence OCR extracted ${extractedText.length} characters.`);
+      } catch (ocrErr) {
+        console.warn(`[OCR] Azure Document Intelligence OCR notice for "${fileName}":`, ocrErr);
+      }
+    }
+  }
+
   if (GEMINI_API_KEY && !GEMINI_API_KEY.includes('your_gemini_api_key')) {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const modelsToTry = Array.from(new Set([GEMINI_MODEL, ...BACKUP_MODELS]));
@@ -88,13 +114,20 @@ export async function extractClinicalData(input: DocumentProcessingInput): Promi
           },
         };
 
-        const prompt = `Please extract clinical quality measures from this clinical document (${fileName}).`;
+        const prompt = extractedText
+          ? `Please extract clinical quality measures from this clinical document (${fileName}).
+Document text extracted via ${ocrMethod}:
+"""
+${extractedText.slice(0, 15000)}
+"""`
+          : `Please extract clinical quality measures from this clinical document (${fileName}).`;
+
         const result = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
         const responseText = result.response.text();
 
         const parsed = parseGeminiResponse(responseText);
         if (parsed) {
-          console.log(`[GeminiService] Successfully extracted clinical data using ${modelName} for ${fileName}.`);
+          console.log(`[GeminiService] Successfully extracted clinical data using ${modelName} (${ocrMethod}) for ${fileName}.`);
           return parsed;
         }
       } catch (err: unknown) {
@@ -205,7 +238,6 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): Raw
     const diastolic = parseInt(bpMatch[2] ?? '0', 10);
 
     if (systolic >= 60 && systolic <= 260 && diastolic >= 40 && diastolic <= 160) {
-      // Check current line for goal, target, past, or previous markers
       const lineStart = text.lastIndexOf('\n', bpMatch.index) + 1;
       const lineEnd = text.indexOf('\n', bpMatch.index);
       const currentLine = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
@@ -227,7 +259,6 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): Raw
     }
   }
 
-  // 4. Detect HbA1c Readings
   const hba1cReadings: HbA1cReading[] = [];
   const a1cRegex = /(?:hba1c|hemoglobin a1c|a1c)[\s:=]+(\d{1,2}(?:\.\d{1,2})?)\s*%?/gi;
   let a1cMatch: RegExpExecArray | null;

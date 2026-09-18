@@ -3,6 +3,7 @@ import { evaluateClinicalDocument } from '../rules/clinicalRulesEngine.js';
 import type { ClinicalDocumentDbRow } from '../types/database.types.js';
 import type { ClinicalDocumentDTO } from '../types/document.types.js';
 import type { DocumentProcessingInput } from '../types/extraction.types.js';
+import { blobStorageService } from './blobStorageService.js';
 import { extractClinicalData } from './geminiService.js';
 
 export async function processClinicalDocument(
@@ -17,6 +18,23 @@ export async function processClinicalDocument(
     fileType = 'IMAGE';
   } else if (lower.includes('scanned')) {
     fileType = 'SCANNED_PDF';
+  }
+
+  // Upload to Azure Blob Storage if configured
+  let blobUrl: string | null = null;
+  let blobName: string | null = null;
+  if (blobStorageService.isConfigured() && input.fileBuffer) {
+    try {
+      const uploadRes = await blobStorageService.uploadClinicalDocument(
+        fileName,
+        input.fileBuffer,
+        input.mimeType
+      );
+      blobUrl = uploadRes.blobUrl;
+      blobName = uploadRes.blobName;
+    } catch (uploadErr) {
+      console.warn(`[ProcessingService] Azure Blob upload skipped or non-fatal error for ${documentId}:`, uploadErr);
+    }
   }
 
   try {
@@ -40,6 +58,8 @@ export async function processClinicalDocument(
       confidence_score: evaluation.confidence.compositeScore,
       error_message: evaluation.errorMessage,
       patient_age: evaluation.patientAge,
+      file_url: blobUrl,
+      blob_name: blobName,
       raw_extracted_json: {
         rawExtraction,
         confidenceBreakdown: evaluation.confidence,
@@ -67,6 +87,8 @@ export async function processClinicalDocument(
         : Number(saved.confidence_score),
       errorMessage: saved.error_message,
       patientAge: saved.patient_age,
+      fileUrl: saved.file_url ?? (saved.blob_name && blobStorageService.isConfigured() ? `/api/documents/${saved.document_id}/file` : null),
+      blobName: saved.blob_name,
       retryCount: saved.retry_count,
       confidenceBreakdown: evaluation.confidence,
       rawAuditJson: typeof saved.raw_extracted_json === 'object' && saved.raw_extracted_json !== null
@@ -90,6 +112,8 @@ export async function processClinicalDocument(
       confidence_score: 0.0,
       error_message: `Technical processing failure: ${errorMsg}`,
       patient_age: null,
+      file_url: blobUrl,
+      blob_name: blobName,
       raw_extracted_json: { error: errorMsg },
       retry_count: 0,
       created_at: new Date(),
@@ -111,6 +135,8 @@ export async function processClinicalDocument(
       confidenceScore: 0.0,
       errorMessage: saved.error_message,
       patientAge: null,
+      fileUrl: saved.file_url ?? null,
+      blobName: saved.blob_name ?? null,
       retryCount: saved.retry_count,
     };
   }
