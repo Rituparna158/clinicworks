@@ -9,34 +9,38 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ health, onRefresh, isRefreshing }) => {
   const isOnline = health?.status === 'HEALTHY';
-  const dbStatus = health?.database.connected ? 'PostgreSQL Active' : 'In-Memory Store';
+  const dbStatus = health?.database.connected ? 'Database Connected' : 'Storage Ready';
 
   return (
     <header className="navbar">
       <div className="nav-container">
         <div className="brand">
           <div className="brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
           </div>
           <div className="brand-text">
             <span className="brand-name">ClinicWorks</span>
-            <span className="brand-badge">Azure AI Clinical Platform</span>
+            <span className="brand-badge">Clinical Document Processing</span>
           </div>
         </div>
 
-        <div className="nav-status">
-          <span className={`status-indicator ${isOnline ? 'online' : 'offline'}`} />
-          <span className="status-label">
-            {isOnline ? `Online (${dbStatus})` : 'Connecting...'}
-          </span>
+        <div className="nav-actions">
+          <div className="system-health-pill" title={isOnline ? 'All services operational' : 'System connectivity issue'}>
+            <span className={`status-dot ${isOnline ? 'online' : 'offline'}`} />
+            <span className="health-label">
+              {isOnline ? dbStatus : 'Reconnecting...'}
+            </span>
+          </div>
+
           <button
             type="button"
-            className="btn-sm btn-outline"
+            className="btn-refresh"
             onClick={onRefresh}
             disabled={isRefreshing}
             title="Refresh documents list"
+            aria-label="Refresh documents list"
           >
             <svg
               width="14"
@@ -44,14 +48,14 @@ export const Header: React.FC<HeaderProps> = ({ health, onRefresh, isRefreshing 
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              strokeWidth="2.2"
               className={isRefreshing ? 'spin-icon' : ''}
             >
-              <polyline points="23 4 23 10 17 10" />
-              <polyline points="1 20 1 14 7 14" />
+              <path d="M23 4v6h-6" />
+              <path d="M1 20v-6h6" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
-            Refresh
+            <span>Refresh</span>
           </button>
         </div>
       </div>

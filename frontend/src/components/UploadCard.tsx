@@ -24,12 +24,15 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onDocumentProcessed, onP
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setSelectedScenario(null);
       setAlert(null);
     }
   };
@@ -40,23 +43,26 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onDocumentProcessed, onP
     const file = e.dataTransfer.files[0];
     if (file) {
       setSelectedFile(file);
+      setSelectedScenario(null);
       setAlert(null);
     }
   };
 
-  const handleQuickSample = async (sampleFileName: string) => {
+  const handleQuickSample = async (sampleFileName: string, label: string) => {
+    setSelectedScenario(sampleFileName);
     try {
       const res = await fetch(`/sample-docs/${sampleFileName}`);
       if (!res.ok) throw new Error('Failed to load sample document');
       const blob = await res.blob();
       const file = new File([blob], sampleFileName, { type: 'application/pdf' });
       setSelectedFile(file);
-      setAlert({ msg: `Loaded sample test document: ${sampleFileName}`, type: 'success' });
+      setAlert({ msg: `Selected test scenario: "${label}" (${sampleFileName}). Ready to submit.`, type: 'success' });
     } catch {
       // Synthetic fallback File
       const dummyBlob = new Blob(['%PDF-1.7 Clinical Report'], { type: 'application/pdf' });
       const file = new File([dummyBlob], sampleFileName, { type: 'application/pdf' });
       setSelectedFile(file);
+      setAlert({ msg: `Selected test scenario: "${label}" (${sampleFileName}). Ready to submit.`, type: 'success' });
     }
   };
 
@@ -77,6 +83,7 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onDocumentProcessed, onP
         type: 'success',
       });
       setSelectedFile(null);
+      setSelectedScenario(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       onDocumentProcessed(doc);
     } catch (err: unknown) {
@@ -107,19 +114,24 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onDocumentProcessed, onP
 
       {/* Quick Sample Buttons */}
       <div className="sample-picker">
-        <span className="sample-label">Quick Test Scenarios:</span>
+        <span className="sample-label">Quick Test Scenarios (Click to select preset document):</span>
         <div className="sample-buttons">
-          {SAMPLE_SCENARIOS.map((scenario) => (
-            <button
-              key={scenario.file}
-              type="button"
-              className="btn-chip"
-              onClick={() => handleQuickSample(scenario.file)}
-            >
-              <span className={`chip-dot ${scenario.dot}`} />
-              {scenario.label}
-            </button>
-          ))}
+          {SAMPLE_SCENARIOS.map((scenario) => {
+            const isSelected = selectedScenario === scenario.file;
+            return (
+              <button
+                key={scenario.file}
+                type="button"
+                className={`btn-chip ${isSelected ? 'active' : ''}`}
+                onClick={() => handleQuickSample(scenario.file, scenario.label)}
+                title={`Click to load sample: ${scenario.file}`}
+              >
+                <span className={`chip-dot ${scenario.dot}`} />
+                <span>{scenario.label}</span>
+                {isSelected && <span className="chip-check">&#10003;</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 

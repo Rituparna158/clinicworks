@@ -10,12 +10,14 @@ export async function processClinicalDocument(
 ): Promise<ClinicalDocumentDTO> {
   const { documentId, fileName, submittedBy } = input;
 
-  // Determine file type (Scanned PDF, selectable PDF, or Image)
-  const isImageOrScanned =
-    fileName.toLowerCase().includes('scanned') ||
-    fileName.toLowerCase().includes('image') ||
-    input.mimeType.startsWith('image/');
-  const fileType = isImageOrScanned ? 'SCANNED_PDF' : 'PDF';
+  // Determine file type (PDF, SCANNED_PDF, or IMAGE)
+  let fileType: 'PDF' | 'SCANNED_PDF' | 'IMAGE' = 'PDF';
+  const lower = fileName.toLowerCase();
+  if (input.mimeType.startsWith('image/') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+    fileType = 'IMAGE';
+  } else if (lower.includes('scanned')) {
+    fileType = 'SCANNED_PDF';
+  }
 
   try {
     // Step 1: Gemini AI Multimodal Extraction

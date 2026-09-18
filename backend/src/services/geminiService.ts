@@ -6,7 +6,8 @@ import type { DocumentProcessingInput, RawExtractionOutput } from '../types/extr
 dotenv.config();
 
 const GEMINI_API_KEY = process.env['GEMINI_API_KEY'] ?? '';
-const GEMINI_MODEL = process.env['GEMINI_MODEL'] ?? 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env['GEMINI_MODEL'] ?? 'gemini-3.5-flash-lite';
+const BACKUP_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest'];
 
 const SYSTEM_EXTRACTION_PROMPT = `
 You are an expert clinical document extraction AI specialized in medical records and laboratory reports.
@@ -50,42 +51,60 @@ Respond strictly with valid JSON conforming to this schema:
 }
 `;
 
+function resolveMimeType(fileName: string, mimeType?: string): string {
+  if (mimeType && mimeType !== 'application/octet-stream') {
+    return mimeType;
+  }
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'application/pdf';
+}
+
 export async function extractClinicalData(input: DocumentProcessingInput): Promise<RawExtractionOutput> {
   const { fileName, fileBuffer, mimeType } = input;
+  const resolvedMime = resolveMimeType(fileName, mimeType);
 
   if (GEMINI_API_KEY && !GEMINI_API_KEY.includes('your_gemini_api_key')) {
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODEL,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.1, 
-        },
-      });
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const modelsToTry = Array.from(new Set([GEMINI_MODEL, ...BACKUP_MODELS]));
 
-      const base64Data = fileBuffer.toString('base64');
-      const inlinePart = {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType || 'application/pdf',
-        },
-      };
+    for (const modelName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
+        });
 
-      const prompt = `Please extract clinical quality measures from this clinical document (${fileName}).`;
-      const result = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
-      const responseText = result.response.text();
+        const base64Data = fileBuffer.toString('base64');
+        const inlinePart = {
+          inlineData: {
+            data: base64Data,
+            mimeType: resolvedMime,
+          },
+        };
 
-      const parsed = parseGeminiResponse(responseText);
-      if (parsed) {
-        return parsed;
+        const prompt = `Please extract clinical quality measures from this clinical document (${fileName}).`;
+        const result = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
+        const responseText = result.response.text();
+
+        const parsed = parseGeminiResponse(responseText);
+        if (parsed) {
+          console.log(`[GeminiService] Successfully extracted clinical data using ${modelName} for ${fileName}.`);
+          return parsed;
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[GeminiService] Model ${modelName} call failed (${msg.split('\n')[0]}). Trying next candidate...`);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[GeminiService] Live API call failed (${msg}); falling back to resilient rule-based extractor.`);
     }
   }
 
+  console.warn(`[GeminiService] Live Gemini AI calls exhausted or unconfigured for ${fileName}; using direct text extractor.`);
   return fallbackClinicalExtractor(fileBuffer, fileName);
 }
 
@@ -161,18 +180,12 @@ function parseGeminiResponse(jsonText: string): RawExtractionOutput | null {
 
 export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): RawExtractionOutput {
   const text = buffer.toString('utf-8');
-  const lowerText = text.toLowerCase();
-  const lowerName = fileName.toLowerCase();
 
   // 1. Detect Patient Age
   let age: number | null = null;
   const ageMatch = text.match(/(?:age|patient age)[\s:]+(\d{1,3})/i);
   if (ageMatch && ageMatch[1]) {
     age = parseInt(ageMatch[1], 10);
-  } else if (lowerName.includes('under18') || lowerName.includes('pediatric') || lowerName.includes('15') || lowerName.includes('16')) {
-    age = 15;
-  } else if (lowerName.includes('adult') || lowerName.includes('1001') || lowerName.includes('1002')) {
-    age = 54;
   }
 
   // 2. Detect Patient Name
@@ -214,26 +227,6 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): Raw
     }
   }
 
-  // Heuristic for filename-based synthetic sample docs if raw stream is compressed PDF
-  if (bpReadings.length === 0 && (lowerName.includes('bp') || lowerText.includes('blood pressure'))) {
-    if (lowerName.includes('multiple')) {
-      bpReadings.push(
-        { systolic: 140, diastolic: 90, unit: 'mmHg', date: '2026-05-10', isGoalOrTarget: false },
-        { systolic: 136, diastolic: 84, unit: 'mmHg', date: '2026-08-15', isGoalOrTarget: false }, // Most recent
-        { systolic: 130, diastolic: 82, unit: 'mmHg', date: '2026-07-01', isGoalOrTarget: false }
-      );
-    } else if (lowerName.includes('with_goal')) {
-      bpReadings.push(
-        { systolic: 120, diastolic: 80, unit: 'mmHg', date: null, isGoalOrTarget: true }, // Target
-        { systolic: 142, diastolic: 92, unit: 'mmHg', date: '2026-08-10', isGoalOrTarget: false }  // Actual
-      );
-    } else if (lowerName.includes('under') || lowerName.includes('pediatric')) {
-      bpReadings.push({ systolic: 118, diastolic: 76, unit: 'mmHg', date: '2026-08-15', isGoalOrTarget: false });
-    } else {
-      bpReadings.push({ systolic: 138, diastolic: 88, unit: 'mmHg', date: '2026-08-12', isGoalOrTarget: false });
-    }
-  }
-
   // 4. Detect HbA1c Readings
   const hba1cReadings: HbA1cReading[] = [];
   const a1cRegex = /(?:hba1c|hemoglobin a1c|a1c)[\s:=]+(\d{1,2}(?:\.\d{1,2})?)\s*%?/gi;
@@ -242,7 +235,6 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): Raw
   while ((a1cMatch = a1cRegex.exec(text)) !== null) {
     const value = parseFloat(a1cMatch[1] ?? '0');
     if (value >= 3.0 && value <= 20.0) {
-      // Check current line for goal, target, reference, or normal markers
       const lineStart = text.lastIndexOf('\n', a1cMatch.index) + 1;
       const lineEnd = text.indexOf('\n', a1cMatch.index);
       const currentLine = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
@@ -262,38 +254,24 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): Raw
     }
   }
 
-  if (hba1cReadings.length === 0 && (lowerName.includes('hba1c') || lowerName.includes('a1c') || lowerText.includes('hemoglobin'))) {
-    if (lowerName.includes('prediabetes')) {
-      hba1cReadings.push({ value: 5.8, unit: '%', date: '2026-08-01', isGoalOrTarget: false });
-    } else if (lowerName.includes('multiple')) {
-      hba1cReadings.push(
-        { value: 8.2, unit: '%', date: '2026-08-01', isGoalOrTarget: false },
-        { value: 6.9, unit: '%', date: '2026-05-15', isGoalOrTarget: false }, // Lowest
-        { value: 7.5, unit: '%', date: '2026-07-20', isGoalOrTarget: false }
-      );
-    } else {
-      hba1cReadings.push({ value: 7.4, unit: '%', date: '2026-07-30', isGoalOrTarget: false });
-    }
-  }
-
   let detectedType: 'BP' | 'A1C' | 'UNKNOWN' = 'UNKNOWN';
   if (bpReadings.length > 0) {
     detectedType = 'BP';
   } else if (hba1cReadings.length > 0) {
     detectedType = 'A1C';
-  } else if (lowerName.includes('bp')) {
-    detectedType = 'BP';
-  } else if (lowerName.includes('a1c') || lowerName.includes('hba1c')) {
-    detectedType = 'A1C';
   }
+
+  const confidence = detectedType === 'UNKNOWN' ? 20 : 85;
 
   return {
     detectedType,
     patient: { name, age },
     bpReadings,
     hba1cReadings,
-    summaryNotes: `Extracted via clinical parser (${fileName}).`,
-    modelConfidenceEstimate: 92,
+    summaryNotes: detectedType === 'UNKNOWN'
+      ? `No valid clinical quality measures detected in document (${fileName}).`
+      : `Extracted clinical measure from text parser (${fileName}).`,
+    modelConfidenceEstimate: confidence,
   };
 }
 
