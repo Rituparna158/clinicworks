@@ -1,0 +1,138 @@
+/* ==========================================================================
+   ClinicWorks - Clinical Operations Design System & Global Styles
+   ========================================================================== */
+
+:root {
+  /* Brand Accent: Deep Medical Teal */
+  --primary: #0d9488;
+  --primary-hover: #0f766e;
+  --primary-active: #115e59;
+  --primary-light: #f0fdfa;
+  --primary-ring: rgba(13, 148, 136, 0.2);
+
+  /* Neutrals (Clean Slate Palette) */
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50: #f8fafc;
+  --white: #ffffff;
+
+  /* Clinical Status Colors (Accessible Contrast) */
+  --status-success-bg: #ecfdf5;
+  --status-success-border: #a7f3d0;
+  --status-success-text: #065f46;
+  --status-success-dot: #059669;
+
+  --status-review-bg: #fffbeb;
+  --status-review-border: #fde68a;
+  --status-review-text: #92400e;
+  --status-review-dot: #d97706;
+
+  --status-failed-bg: #fef2f2;
+  --status-failed-border: #fecaca;
+  --status-failed-text: #991b1b;
+  --status-failed-dot: #dc2626;
+
+  --status-processing-bg: #eff6ff;
+  --status-processing-border: #bfdbfe;
+  --status-processing-text: #1e40af;
+  --status-processing-dot: #2563eb;
+
+  /* Clinical Measure Types */
+  --badge-bp-bg: #eef2ff;
+  --badge-bp-border: #c7d2fe;
+  --badge-bp-text: #3730a3;
+  --badge-bp-dot: #4f46e5;
+
+  --badge-a1c-bg: #ecfeff;
+  --badge-a1c-border: #a5f3fc;
+  --badge-a1c-text: #155e75;
+  --badge-a1c-dot: #0891b2;
+
+  /* Shadows & Depth */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-dropdown: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 9999px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--slate-100);
+  color: var(--slate-900);
+  line-height: 1.5;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base utility text styles */
+.text-muted {
+  color: var(--slate-400);
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Spin animation utility */
+.spin-icon {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Spinner indicator */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+/* Skeleton animation */
+@keyframes skeleton-pulse {
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+
+.skeleton-line {
+  height: 14px;
+  background-color: var(--slate-200);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}

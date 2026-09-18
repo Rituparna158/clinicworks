@@ -1,0 +1,47 @@
+{
+  "name": "clinicworks-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clinical Document Processing Platform built on Azure, Node.js, TypeScript, Google Gemini, and PostgreSQL",
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "tsx watch backend/src/server.ts",
+    "dev:backend": "tsx watch backend/src/server.ts",
+    "dev:frontend": "npm run dev --workspace=@clinicworks/frontend",
+    "build": "npm run build --workspace=@clinicworks/frontend && npm run build --workspace=@clinicworks/backend",
+    "build:frontend": "npm run build --workspace=@clinicworks/frontend",
+    "build:backend": "npm run build --workspace=@clinicworks/backend",
+    "start": "node backend/dist/server.js",
+    "test": "npm run test --workspace=@clinicworks/backend",
+    "test:watch": "npm run test:watch --workspace=@clinicworks/backend",
+    "type-check": "npm run type-check --workspace=@clinicworks/backend && npm run type-check --workspace=@clinicworks/frontend",
+    "generate:docs": "tsx backend/src/utils/generateSampleDocs.ts",
+    "init:azure-db": "tsx backend/src/utils/initAzureDatabase.ts",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "clean": "rimraf backend/dist frontend/dist dist"
+  },
+  "keywords": [
+    "azure",
+    "gemini",
+    "clinical-document-processing",
+    "postgresql",
+    "azure-functions",
+    "logic-apps",
+    "typescript",
+    "react",
+    "vite"
+  ],
+  "author": "ClinicWorks Team",
+  "license": "ISC",
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
