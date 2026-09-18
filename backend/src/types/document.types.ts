@@ -16,6 +16,8 @@ export interface ClinicalDocumentDTO {
   readonly confidenceScore: number | null;
   readonly errorMessage: string | null;
   readonly patientAge: number | null;
+  readonly fileUrl?: string | null | undefined;
+  readonly blobName?: string | null | undefined;
   readonly retryCount: number;
   readonly confidenceBreakdown?: ConfidenceBreakdown | undefined;
   readonly rawAuditJson?: Record<string, unknown> | undefined;

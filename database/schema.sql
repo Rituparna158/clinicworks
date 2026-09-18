@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS clinical_documents (
     confidence_score NUMERIC(5, 2),                        -- 0.00 to 100.00
     error_message TEXT,                                    -- Details for Failed / Needs Review
     patient_age INT,                                       -- Patient age if extracted
+    file_url TEXT,                                         -- Azure Blob Storage URL / SAS URL
+    blob_name VARCHAR(255),                                -- Azure Blob identifier
     raw_extracted_json JSONB,                              -- Complete audit trail from LLM & rules
     retry_count INT NOT NULL DEFAULT 0,                    -- Number of re-processing attempts
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

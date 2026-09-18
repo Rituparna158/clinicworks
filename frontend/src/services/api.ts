@@ -24,6 +24,8 @@ export interface ClinicalDocument {
   readonly confidenceScore: number | null;
   readonly errorMessage: string | null;
   readonly patientAge: number | null;
+  readonly fileUrl?: string | null;
+  readonly blobName?: string | null;
   readonly retryCount: number;
   readonly confidenceBreakdown?: ConfidenceBreakdown;
   readonly rawAuditJson?: Record<string, unknown>;

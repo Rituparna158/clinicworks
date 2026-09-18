@@ -42,6 +42,8 @@ export async function handleListDocuments(req: Request, res: Response): Promise<
           : Number(r.confidence_score),
         errorMessage: r.error_message,
         patientAge: r.patient_age,
+        fileUrl: r.file_url ?? (r.blob_name ? `/api/documents/${r.document_id}/file` : null),
+        blobName: r.blob_name ?? null,
         retryCount: r.retry_count,
         rawAuditJson: rawObj,
       };

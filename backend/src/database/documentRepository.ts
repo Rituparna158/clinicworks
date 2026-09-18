@@ -22,11 +22,15 @@ export async function initializeDatabase(): Promise<void> {
           confidence_score NUMERIC(5, 2),
           error_message TEXT,
           patient_age INT,
+          file_url TEXT,
+          blob_name TEXT,
           raw_extracted_json JSONB,
           retry_count INT NOT NULL DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE clinical_documents ADD COLUMN IF NOT EXISTS file_url TEXT;
+      ALTER TABLE clinical_documents ADD COLUMN IF NOT EXISTS blob_name TEXT;
       CREATE INDEX IF NOT EXISTS idx_clinical_docs_status ON clinical_documents(processing_status);
       CREATE INDEX IF NOT EXISTS idx_clinical_docs_type ON clinical_documents(document_type);
       CREATE INDEX IF NOT EXISTS idx_clinical_docs_date_processed ON clinical_documents(date_processed DESC);
@@ -92,8 +96,9 @@ export async function saveDocument(record: ClinicalDocumentDbRow): Promise<Clini
       INSERT INTO clinical_documents (
         document_id, file_name, file_type, document_type, measure_extracted,
         measure_date, date_processed, processed_by, processing_status,
-        confidence_score, error_message, patient_age, raw_extracted_json, retry_count
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        confidence_score, error_message, patient_age, file_url, blob_name,
+        raw_extracted_json, retry_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       ON CONFLICT (document_id) DO UPDATE SET
         document_type = EXCLUDED.document_type,
         measure_extracted = EXCLUDED.measure_extracted,
@@ -102,6 +107,8 @@ export async function saveDocument(record: ClinicalDocumentDbRow): Promise<Clini
         confidence_score = EXCLUDED.confidence_score,
         error_message = EXCLUDED.error_message,
         patient_age = EXCLUDED.patient_age,
+        file_url = COALESCE(EXCLUDED.file_url, clinical_documents.file_url),
+        blob_name = COALESCE(EXCLUDED.blob_name, clinical_documents.blob_name),
         raw_extracted_json = EXCLUDED.raw_extracted_json,
         retry_count = clinical_documents.retry_count + 1,
         updated_at = CURRENT_TIMESTAMP
@@ -121,6 +128,8 @@ export async function saveDocument(record: ClinicalDocumentDbRow): Promise<Clini
       record.confidence_score,
       record.error_message,
       record.patient_age,
+      record.file_url ?? null,
+      record.blob_name ?? null,
       typeof record.raw_extracted_json === 'object'
         ? JSON.stringify(record.raw_extracted_json)
         : record.raw_extracted_json,

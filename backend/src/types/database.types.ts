@@ -16,6 +16,8 @@ export interface ClinicalDocumentDbRow {
   readonly confidence_score: string | number | null; // pg driver returns numeric as string or number
   readonly error_message: string | null;
   readonly patient_age: number | null;
+  readonly file_url?: string | null;
+  readonly blob_name?: string | null;
   readonly raw_extracted_json: string | Record<string, unknown> | null;
   readonly retry_count: number;
   readonly created_at: Date;
