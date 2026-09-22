@@ -27,7 +27,8 @@ export async function executeClinicalExtraction(
   context?: InvocationContext,
   callerName: string = 'logic-app-orchestrator',
   providedBlobName?: string,
-  providedFileName?: string
+  providedFileName?: string,
+  forceReExtract: boolean = false
 ): Promise<ClinicalDocumentDTO | null> {
   context?.log(`[ClinicalExtractor] Processing initiated by "${callerName}" for Document ID: ${documentId}`);
 
@@ -41,6 +42,44 @@ export async function executeClinicalExtraction(
   context?.log(`[ClinicalExtractor] Lock acquired by "${callerName}" for document "${claimedDoc.file_name}". Processing...`);
 
   const existingDoc = await getDocumentById(documentId);
+
+  // Fast-path: Check if document was already extracted by upload handler (avoid redundant duplicate LLM call)
+  if (
+    !forceReExtract &&
+    existingDoc &&
+    existingDoc.raw_extracted_json &&
+    existingDoc.processing_status
+  ) {
+    context?.log(
+      `[ClinicalExtractor] Document ${documentId} already processed with status "${existingDoc.processing_status}". Returning verified record to orchestrator.`
+    );
+    return {
+      documentId: existingDoc.document_id,
+      fileName: existingDoc.file_name,
+      fileType: existingDoc.file_type as 'PDF' | 'SCANNED_PDF' | 'IMAGE',
+      documentType: existingDoc.document_type as 'BP' | 'A1C' | 'UNKNOWN',
+      measureExtracted: existingDoc.measure_extracted,
+      measureDate: existingDoc.measure_date ? String(existingDoc.measure_date) : null,
+      dateProcessed: existingDoc.date_processed.toISOString(),
+      processedBy: existingDoc.processed_by,
+      processingStatus: existingDoc.processing_status as 'Success' | 'Needs Review' | 'Failed',
+      confidenceScore:
+        typeof existingDoc.confidence_score === 'number'
+          ? existingDoc.confidence_score
+          : Number(existingDoc.confidence_score),
+      errorMessage: existingDoc.error_message,
+      patientAge: existingDoc.patient_age,
+      fileUrl:
+        existingDoc.file_url ??
+        (existingDoc.blob_name && blobStorageService.isConfigured()
+          ? `/api/documents/${existingDoc.document_id}/file`
+          : null),
+      blobName: existingDoc.blob_name,
+      retryCount: existingDoc.retry_count,
+      confidenceBreakdown: (existingDoc.raw_extracted_json as Record<string, unknown>)?.['confidenceBreakdown'] as any,
+      rawAuditJson: existingDoc.raw_extracted_json as Record<string, unknown>,
+    };
+  }
   const blobName = providedBlobName ?? existingDoc?.blob_name ?? claimedDoc.blob_name;
   const fileName =
     providedFileName ??
@@ -184,7 +223,19 @@ app.http('extractClinicalDocumentHttp', {
         docId = `DOC-${Date.now().toString().slice(-6)}`;
       }
 
-      const result = await executeClinicalExtraction(docId!, context, 'logic-app-orchestrator', blobName, fileName);
+      const forceReExtract = Boolean(
+        (body as Record<string, unknown>)?.['forceReExtract'] ??
+          request.query.get('force') === 'true'
+      );
+
+      const result = await executeClinicalExtraction(
+        docId!,
+        context,
+        'logic-app-orchestrator',
+        blobName,
+        fileName,
+        forceReExtract
+      );
 
       if (!result) {
         return {

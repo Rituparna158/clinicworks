@@ -122,12 +122,36 @@ ${extractedText.slice(0, 15000)}
 """`
           : `Please extract clinical quality measures from this clinical document (${fileName}).`;
 
+        // Optimization: Fast-path text-only inference if digital text / OCR is already present.
+        // Pure text token generation takes ~1-2s, bypassing 15s+ multimodal PDF rendering overhead.
+        const hasCleanText = Boolean(extractedText && extractedText.length >= 20);
+
+        if (hasCleanText) {
+          try {
+            const textResult = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, prompt]);
+            const textResponse = textResult.response.text();
+            const parsedText = parseGeminiResponse(textResponse);
+            if (
+              parsedText &&
+              parsedText.detectedType !== 'UNKNOWN' &&
+              (parsedText.bpReadings.length > 0 || parsedText.hba1cReadings.length > 0)
+            ) {
+              console.log(`[GeminiService] Fast-path text extraction succeeded using ${modelName} (${ocrMethod}) for ${fileName}.`);
+              return parsedText;
+            }
+          } catch (textErr: unknown) {
+            const textErrMsg = textErr instanceof Error ? textErr.message : String(textErr);
+            console.warn(`[GeminiService] Fast-path text extraction attempt failed (${textErrMsg.split('\n')[0]}). Falling back to multimodal vision...`);
+          }
+        }
+
+        // Multimodal vision fallback (for scanned documents, image files, or ambiguous layouts)
         const result = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
         const responseText = result.response.text();
 
         const parsed = parseGeminiResponse(responseText);
         if (parsed) {
-          console.log(`[GeminiService] Successfully extracted clinical data using ${modelName} (${ocrMethod}) for ${fileName}.`);
+          console.log(`[GeminiService] Multimodal extraction succeeded using ${modelName} (${ocrMethod}) for ${fileName}.`);
           return parsed;
         }
       } catch (err: unknown) {
