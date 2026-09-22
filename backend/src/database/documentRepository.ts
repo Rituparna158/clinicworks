@@ -201,6 +201,59 @@ export async function listDocuments(filter?: DocumentQueryFilter): Promise<reado
 }
 
 
+export async function findDocumentByBlobName(blobName: string): Promise<ClinicalDocumentDbRow | null> {
+  const health = await testConnection();
+
+  if (health.isHealthy) {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM clinical_documents WHERE blob_name = $1 OR file_name = $1 ORDER BY created_at DESC LIMIT 1',
+      [blobName]
+    );
+    const row = result.rows[0];
+    return row ? (row as unknown as ClinicalDocumentDbRow) : null;
+  }
+
+  for (const doc of inMemoryStore.values()) {
+    if (doc.blob_name === blobName || doc.file_name === blobName) return doc;
+  }
+  return null;
+}
+
+export async function claimDocumentForProcessing(
+  documentId: string,
+  callerName: string = 'logic-app-orchestrator'
+): Promise<ClinicalDocumentDbRow | null> {
+  const health = await testConnection();
+
+  if (health.isHealthy) {
+    const pool = getPool();
+    const query = `
+      UPDATE clinical_documents
+      SET processed_by = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE document_id = $1
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [documentId, callerName]);
+    const row = result.rows[0];
+    return row ? (row as unknown as ClinicalDocumentDbRow) : null;
+  }
+
+  const existing = inMemoryStore.get(documentId);
+  if (existing) {
+    const updated: ClinicalDocumentDbRow = {
+      ...existing,
+      processed_by: callerName,
+      updated_at: new Date(),
+    };
+    inMemoryStore.set(documentId, updated);
+    return updated;
+  }
+  return null;
+}
+
 export function clearInMemoryStore(): void {
   inMemoryStore.clear();
 }
+

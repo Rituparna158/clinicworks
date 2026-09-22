@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Backend services, Azure Function HTTP controllers, Gemini AI pipeline, and clinical rules engine for ClinicWorks",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/functions/clinicalDocumentExtractor.js",
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
@@ -16,6 +16,7 @@
   "dependencies": {
     "@azure-rest/ai-document-intelligence": "^1.0.0-beta.3",
     "@azure/core-auth": "^1.9.0",
+    "@azure/functions": "^4.16.5",
     "@azure/storage-blob": "^12.33.0",
     "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.5",

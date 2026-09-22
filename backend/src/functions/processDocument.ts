@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { processClinicalDocument } from '../services/documentProcessingService.js';
+import { triggerLogicAppOrchestrator } from '../services/logicAppService.js';
 import type { ApiResponse } from '../types/document.types.js';
 import type { DocumentProcessingInput } from '../types/extraction.types.js';
 
@@ -33,6 +34,17 @@ export async function handleProcessDocument(req: Request, res: Response): Promis
     };
 
     const result = await processClinicalDocument(input);
+
+    // Asynchronously trigger Azure Logic App workflow orchestrator for cloud retry & alert tracking
+    if (result.blobName) {
+      triggerLogicAppOrchestrator({
+        documentId: result.documentId,
+        fileName: result.fileName,
+        blobName: result.blobName,
+      }).catch((orchestratorErr) => {
+        console.warn(`[ProcessDocumentHandler] Background Logic App orchestration notice for ${result.documentId}:`, orchestratorErr);
+      });
+    }
 
     const response: ApiResponse<typeof result> = {
       success: true,
