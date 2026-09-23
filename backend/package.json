@@ -17,6 +17,7 @@
     "@azure-rest/ai-document-intelligence": "^1.0.0-beta.3",
     "@azure/core-auth": "^1.9.0",
     "@azure/functions": "^4.16.5",
+    "@azure/monitor-opentelemetry": "^1.20.0",
     "@azure/storage-blob": "^12.33.0",
     "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.5",
