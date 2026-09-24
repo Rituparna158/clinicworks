@@ -166,6 +166,7 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
               <th>Measure Extracted</th>
               <th>Clinical Date</th>
               <th>Processed Date</th>
+              <th>Processed By</th>
               <th>Confidence</th>
               <th>Status</th>
               <th className="text-right">Actions</th>
@@ -181,6 +182,7 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
                   <td><div className="skeleton-line" style={{ width: '100px' }} /></td>
                   <td><div className="skeleton-line" style={{ width: '85px' }} /></td>
                   <td><div className="skeleton-line" style={{ width: '110px' }} /></td>
+                  <td><div className="skeleton-line" style={{ width: '75px' }} /></td>
                   <td><div className="skeleton-line" style={{ width: '90px' }} /></td>
                   <td><div className="skeleton-line" style={{ width: '80px' }} /></td>
                   <td className="text-right"><div className="skeleton-line" style={{ width: '60px', marginLeft: 'auto' }} /></td>
@@ -227,6 +229,16 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
 
                     <td>
                       <span className="table-date">{formatDateTime(doc.dateProcessed)}</span>
+                    </td>
+
+                    <td>
+                      <span className="table-user">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ opacity: 0.65 }}>
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        {doc.processedBy || 'User'}
+                      </span>
                     </td>
 
                     <td>

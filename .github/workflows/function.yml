@@ -1,0 +1,65 @@
+name: Build and Deploy Functions to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/src/functions/**'
+      - 'backend/src/rules/**'
+      - 'backend/src/services/**'
+      - 'backend/src/types/**'
+      - 'backend/src/database/**'
+      - 'backend/host.json'
+      - 'backend/package.json'
+      - 'backend/tsconfig.json'
+      - '.github/workflows/function.yml'
+  workflow_dispatch:
+
+env:
+  FUNCTIONAPP_NAME: ${{ secrets.FUNCTIONAPP_NAME || 'func-clinicworks-dev-centralindia' }}
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Azure Function
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Monorepo Dependencies
+        run: npm install
+
+      - name: Compile Backend & Function TypeScript
+        run: npm run build --workspace=@clinicworks/backend
+
+      - name: Prepare Isolated Production Package
+        run: |
+          # Create clean staging directory outside workspace
+          mkdir -p /tmp/func-staging
+
+          # Copy compiled output, package manifest, and Azure Functions host config
+          cp -r backend/dist /tmp/func-staging/
+          cp backend/package.json /tmp/func-staging/
+          cp backend/host.json /tmp/func-staging/
+
+          # Install production-only dependencies in the isolated folder
+          cd /tmp/func-staging
+          npm install --omit=dev --no-audit --no-fund
+
+          # Zip package back into the workspace root
+          zip -r $GITHUB_WORKSPACE/functionapp.zip .
+
+      - name: Deploy to Azure Function App
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ env.FUNCTIONAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          package: ./functionapp.zip

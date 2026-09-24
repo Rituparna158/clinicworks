@@ -1,3 +1,4 @@
+import './telemetry.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { type Express } from 'express';

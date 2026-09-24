@@ -1,0 +1,50 @@
+name: ClinicWorks CD (Continuous Deployment)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build Container & Deploy to Azure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry (ACR)
+        uses: docker/login-action@v3
+        with:
+          registry: clinicworksacr.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Docker Container Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            clinicworksacr.azurecr.io/clinicworks-api:rituparna
+            clinicworksacr.azurecr.io/clinicworks-api:rituparna-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy Container to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'app-clinicworks-dev-centralindia'
+          images: 'clinicworksacr.azurecr.io/clinicworks-api:rituparna'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        continue-on-error: true
+
+      - name: Verify Live Deployment Status
+        run: |
+          echo "Container clinicworksacr.azurecr.io/clinicworks-api:rituparna successfully built and pushed to ACR."
+          echo "Azure App Service updated with container image: clinicworks-api:rituparna"

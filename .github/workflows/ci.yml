@@ -1,0 +1,34 @@
+name: ClinicWorks CI (Continuous Integration)
+
+on:
+  push:
+    branches:
+      - development
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  validate-and-test:
+    name: Type-Check & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run TypeScript Type-Checks
+        run: npm run type-check
+
+      - name: Run Automated Clinical Unit Tests
+        run: npm run test --workspace=@clinicworks/backend

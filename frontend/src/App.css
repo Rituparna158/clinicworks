@@ -468,6 +468,20 @@
   white-space: nowrap;
 }
 
+.table-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--slate-700);
+  background-color: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .actions-cell {
   display: flex;
   align-items: center;
