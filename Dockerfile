@@ -5,7 +5,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy workspace configurations
-COPY package.json package-lock.json tsconfig.json ./
+COPY package.json package-lock.json* tsconfig.json ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 
@@ -39,8 +39,6 @@ COPY --from=builder /app/frontend/dist ./dist/frontend
 COPY --from=builder /app/frontend/dist ./public
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
-# Copy sample clinical documents
-COPY sample-docs ./sample-docs
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
