@@ -179,30 +179,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               <strong className="details-val text-truncate" title={doc.fileName}>{doc.fileName}</strong>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
                 <span className="details-subval">{doc.fileType}</span>
-                {doc.fileUrl && (
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="View uploaded file in Azure Blob Storage"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      fontSize: '0.75rem',
-                      color: 'var(--primary-600, #2563eb)',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                    Azure Blob
-                  </a>
-                )}
               </div>
             </div>
 
