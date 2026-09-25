@@ -1,0 +1,55 @@
+name: Deploy Infrastructure (Bicep)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: 'Environment (dev, staging, prod)'
+        required: true
+        default: 'dev'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP || 'rg-clinicworks-dev-centralindia' }}
+  DEVOPS_ALERT_EMAIL: ${{ secrets.DEVOPS_ALERT_EMAIL || 'rathrituparna642@gmail.com' }}
+  DB_ADMIN_USER: ${{ secrets.DB_ADMIN_USER || 'clinicadmin' }}
+  DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+
+jobs:
+  deploy-infra:
+    name: Validate and Deploy Bicep Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run What-If Preview
+        run: |
+          echo "Running Azure What-If validation to preview changes without modifying resources..."
+          az deployment group what-if \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --template-file ./infra/main.bicep \
+            --parameters ./infra/main.parameters.${{ github.event.inputs.environmentName || 'dev' }}.json \
+            --parameters dbAdminUser="${{ env.DB_ADMIN_USER }}" dbAdminPassword="${{ env.DB_ADMIN_PASSWORD }}"
+
+      - name: Deploy Bicep template
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            ./infra/main.parameters.${{ github.event.inputs.environmentName || 'dev' }}.json
+            dbAdminUser="${{ env.DB_ADMIN_USER }}"
+            dbAdminPassword="${{ env.DB_ADMIN_PASSWORD }}"
+          failOnStdErr: false
