@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "centralindia"
+    },
+    "envName": {
+      "value": "dev"
+    },
+    "webAppName": {
+      "value": "app-clinicworks-dev-centralindia"
+    },
+    "appServicePlanName": {
+      "value": "ASP-rgclinicworksdev-9333"
+    },
+    "appServicePlanResourceGroup": {
+      "value": "rg-clinicworks-dev"
+    },
+    "dockerImage": {
+      "value": "clinicworksacr.azurecr.io/clinicworks-api:rituparna"
+    },
+    "functionAppName": {
+      "value": "func-clinicworks-dev-centralindia"
+    },
+    "functionAppServicePlanName": {
+      "value": "ASP-rgclinicworksdevcentralindia-8bfa"
+    },
+    "keyVaultName": {
+      "value": "kv-clinicworks-dev01"
+    },
+    "storageAccountName": {
+      "value": "stclinicworksdev01"
+    },
+    "postgresServerName": {
+      "value": "psql-clinicworks-dev-centralindia"
+    },
+    "docIntelName": {
+      "value": "di-clinicworks-dev-centralindia"
+    },
+    "appInsightsName": {
+      "value": "func-clinicworks-dev-centralindia"
+    },
+    "actionGroupName": {
+      "value": "ag-clinicworks-ops-alerts"
+    },
+    "alertEmailAddress": {
+      "value": "rathrituparna642@gmail.com"
+    },
+    "dbAdminUser": {
+      "value": "clinicadmin"
+    }
+  }
+}
