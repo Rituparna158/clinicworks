@@ -22,7 +22,6 @@ env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP || 'rg-clinicworks-dev-centralindia' }}
   DEVOPS_ALERT_EMAIL: ${{ secrets.DEVOPS_ALERT_EMAIL || 'rathrituparna642@gmail.com' }}
   DB_ADMIN_USER: ${{ secrets.DB_ADMIN_USER || 'clinicadmin' }}
-  DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
 
 jobs:
   deploy-infra:
@@ -46,7 +45,11 @@ jobs:
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
             --template-file ./infra/main.bicep \
             --parameters ./infra/main.parameters.${{ github.event.inputs.environmentName || 'dev' }}.json \
-            --parameters dbAdminUser="${{ env.DB_ADMIN_USER }}" dbAdminPassword="${{ env.DB_ADMIN_PASSWORD }}"
+            --parameters \
+              dbAdminUser="${{ env.DB_ADMIN_USER }}" \
+              dbAdminPassword="${{ secrets.DB_ADMIN_PASSWORD }}" \
+              acrPassword="${{ secrets.ACR_PASSWORD }}" \
+              logicAppWorkflowUrl="${{ secrets.LOGIC_APP_WORKFLOW_URL }}"
 
       - name: Deploy Bicep template
         uses: azure/arm-deploy@v2
@@ -57,5 +60,7 @@ jobs:
           parameters: >
             ./infra/main.parameters.${{ github.event.inputs.environmentName || 'dev' }}.json
             dbAdminUser="${{ env.DB_ADMIN_USER }}"
-            dbAdminPassword="${{ env.DB_ADMIN_PASSWORD }}"
+            dbAdminPassword="${{ secrets.DB_ADMIN_PASSWORD }}"
+            acrPassword="${{ secrets.ACR_PASSWORD }}"
+            logicAppWorkflowUrl="${{ secrets.LOGIC_APP_WORKFLOW_URL }}"
           failOnStdErr: false

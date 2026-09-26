@@ -60,6 +60,23 @@ param dbAdminUser string = 'clinicadmin'
 @secure()
 param dbAdminPassword string = ''
 
+@description('Azure Container Registry password for Web App image pull')
+@secure()
+param acrPassword string = ''
+
+@description('Azure Container Registry username')
+param acrUsername string = 'clinicworksacr'
+
+@description('Azure Container Registry server URL')
+param acrServer string = 'https://clinicworksacr.azurecr.io'
+
+@description('Azure Logic App HTTP trigger URL for document pipeline orchestration')
+@secure()
+param logicAppWorkflowUrl string = ''
+
+@description('Azure Document Intelligence endpoint URL')
+param docIntelEndpoint string = 'https://di-clinicworks-dev-centralindia.cognitiveservices.azure.com/'
+
 // ==============================================================================
 // 1. Monitoring (Application Insights)
 // ==============================================================================
@@ -129,6 +146,12 @@ module webapp 'modules/webapp.bicep' = {
     webAppName: webAppName
     dockerImage: dockerImage
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
+    keyVaultName: keyVaultName
+    logicAppWorkflowUrl: logicAppWorkflowUrl
+    docIntelEndpoint: docIntelEndpoint
+    acrPassword: acrPassword
+    acrUsername: acrUsername
+    acrServer: acrServer
   }
 }
 
@@ -146,6 +169,9 @@ module functionapp 'modules/functionapp.bicep' = {
     functionAppName: functionAppName
     storageAccountName: storageAccountName
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
+    keyVaultName: keyVaultName
+    logicAppWorkflowUrl: logicAppWorkflowUrl
+    docIntelEndpoint: docIntelEndpoint
   }
 }
 
@@ -165,7 +191,9 @@ module alerts 'modules/alerts.bicep' = {
 // Outputs
 // ==============================================================================
 output webAppUrl string = webapp.outputs.webAppUrl
+output webAppPrincipalId string = webapp.outputs.webAppPrincipalId
 output functionAppUrl string = functionapp.outputs.functionAppUrl
+output functionAppPrincipalId string = functionapp.outputs.functionAppPrincipalId
 output postgresFqdn string = postgres.outputs.postgresFqdn
 output storageBlobEndpoint string = storage.outputs.primaryBlobEndpoint
 output docIntelEndpoint string = ai.outputs.docIntelEndpoint
