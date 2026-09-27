@@ -230,7 +230,10 @@ export async function claimDocumentForProcessing(
     const pool = getPool();
     const query = `
       UPDATE clinical_documents
-      SET processed_by = $2,
+      SET processed_by = CASE 
+            WHEN processed_by IS NULL OR processed_by = '' THEN $2 
+            ELSE processed_by 
+          END,
           updated_at = CURRENT_TIMESTAMP
       WHERE document_id = $1
       RETURNING *;
@@ -244,7 +247,7 @@ export async function claimDocumentForProcessing(
   if (existing) {
     const updated: ClinicalDocumentDbRow = {
       ...existing,
-      processed_by: callerName,
+      processed_by: existing.processed_by || callerName,
       updated_at: new Date(),
     };
     inMemoryStore.set(documentId, updated);
