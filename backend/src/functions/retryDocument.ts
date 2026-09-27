@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { getDocumentById } from '../database/documentRepository.js';
+import { blobStorageService } from '../services/blobStorageService.js';
 import { processClinicalDocument } from '../services/documentProcessingService.js';
 import type { ApiResponse } from '../types/document.types.js';
 import type { DocumentProcessingInput } from '../types/extraction.types.js';
@@ -33,17 +34,28 @@ export async function handleRetryDocument(req: Request, res: Response): Promise<
       return;
     }
 
-    // Prepare simulated re-ingestion payload
-    const dummyBuffer = Buffer.from(
+    // Retrieve original PDF from Azure Blob Storage if available
+    let fileBuffer: Buffer = Buffer.from(
       `Re-processing Document: ${existingDoc.file_name}\nType: ${existingDoc.document_type}\nEncounter: Clinical Retry`,
       'utf-8'
     );
+    let mimeType = 'application/pdf';
+
+    if (existingDoc.blob_name && blobStorageService.isConfigured()) {
+      try {
+        const downloaded = await blobStorageService.downloadBlob(existingDoc.blob_name);
+        fileBuffer = downloaded.buffer;
+        mimeType = downloaded.contentType;
+      } catch (dlErr) {
+        console.warn(`[RetryHandler] Could not download blob ${existingDoc.blob_name}:`, dlErr);
+      }
+    }
 
     const input: DocumentProcessingInput = {
       documentId: existingDoc.document_id,
       fileName: existingDoc.file_name,
-      fileBuffer: dummyBuffer,
-      mimeType: 'application/pdf',
+      fileBuffer,
+      mimeType,
       submittedBy: `${existingDoc.processed_by} (Retry)`,
     };
 

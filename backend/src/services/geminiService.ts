@@ -64,6 +64,22 @@ function resolveMimeType(fileName: string, mimeType?: string): string {
   return 'application/pdf';
 }
 
+async function generateWithRetry(model: any, contents: any[], maxRetries = 2): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await model.generateContent(contents);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt < maxRetries && (msg.includes('503') || msg.includes('high demand') || msg.includes('429'))) {
+        console.warn(`[GeminiService] Google API temporary demand spike (attempt ${attempt}/${maxRetries}). Retrying in 1.5s...`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export async function extractClinicalData(input: DocumentProcessingInput): Promise<RawExtractionOutput> {
   const { fileName, fileBuffer, mimeType } = input;
   const resolvedMime = resolveMimeType(fileName, mimeType);
@@ -128,7 +144,7 @@ ${extractedText.slice(0, 15000)}
 
         if (hasCleanText) {
           try {
-            const textResult = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, prompt]);
+            const textResult = await generateWithRetry(model, [SYSTEM_EXTRACTION_PROMPT, prompt]);
             const textResponse = textResult.response.text();
             const parsedText = parseGeminiResponse(textResponse);
             if (
@@ -146,7 +162,7 @@ ${extractedText.slice(0, 15000)}
         }
 
         // Multimodal vision fallback (for scanned documents, image files, or ambiguous layouts)
-        const result = await model.generateContent([SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
+        const result = await generateWithRetry(model, [SYSTEM_EXTRACTION_PROMPT, inlinePart, prompt]);
         const responseText = result.response.text();
 
         const parsed = parseGeminiResponse(responseText);
@@ -162,7 +178,7 @@ ${extractedText.slice(0, 15000)}
   }
 
   console.warn(`[GeminiService] Live Gemini AI calls exhausted or unconfigured for ${fileName}; using direct text extractor.`);
-  return fallbackClinicalExtractor(fileBuffer, fileName);
+  return fallbackClinicalExtractor(fileBuffer, fileName, extractedText);
 }
 
 
@@ -235,8 +251,8 @@ function parseGeminiResponse(jsonText: string): RawExtractionOutput | null {
 }
 
 
-export function fallbackClinicalExtractor(buffer: Buffer, fileName: string): RawExtractionOutput {
-  const text = buffer.toString('utf-8');
+export function fallbackClinicalExtractor(buffer: Buffer, fileName: string, fallbackText?: string): RawExtractionOutput {
+  const text = (fallbackText && fallbackText.trim().length >= 10) ? fallbackText : buffer.toString('utf-8');
 
   // 1. Detect Patient Age
   let age: number | null = null;
