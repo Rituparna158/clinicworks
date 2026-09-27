@@ -1,6 +1,4 @@
-// ==============================================================================
-// ClinicWorks - AI Services (Document Intelligence / OCR) Module
-// ==============================================================================
+
 param location string
 param docIntelName string
 

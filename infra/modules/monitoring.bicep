@@ -1,6 +1,3 @@
-// ==============================================================================
-// ClinicWorks - Monitoring (Application Insights & Log Analytics) Module
-// ==============================================================================
 param location string
 param appInsightsName string
 param logAnalyticsWorkspaceName string = ''
