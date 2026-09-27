@@ -1,9 +1,3 @@
-// ==============================================================================
-// ClinicWorks - Main Orchestrator (Azure Bicep)
-// Target Scope: Resource Group
-// Environment: dev
-// Location: centralindia
-// ==============================================================================
 targetScope = 'resourceGroup'
 
 @description('Deployment location for all regional resources')
@@ -12,7 +6,6 @@ param location string = 'centralindia'
 @description('Environment identifier (dev, staging, prod)')
 param envName string = 'dev'
 
-// Resource Names
 @description('Fullstack Web App name (Linux Container)')
 param webAppName string = 'app-clinicworks-dev-centralindia'
 
@@ -52,7 +45,6 @@ param actionGroupName string = 'ag-clinicworks-ops-alerts'
 @description('DevOps / Ops team alert email address')
 param alertEmailAddress string = 'rathrituparna642@gmail.com'
 
-// Secrets (Passed securely from CI/CD, NOT stored in parameters.json)
 @description('PostgreSQL Administrator Login')
 param dbAdminUser string = 'clinicadmin'
 
@@ -77,9 +69,6 @@ param logicAppWorkflowUrl string = ''
 @description('Azure Document Intelligence endpoint URL')
 param docIntelEndpoint string = 'https://di-clinicworks-dev-centralindia.cognitiveservices.azure.com/'
 
-// ==============================================================================
-// 1. Monitoring (Application Insights)
-// ==============================================================================
 module monitoring 'modules/monitoring.bicep' = {
   name: 'deploy-monitoring-${envName}'
   params: {
@@ -88,9 +77,6 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
-// ==============================================================================
-// 2. Key Vault (RBAC Enabled)
-// ==============================================================================
 module keyvault 'modules/keyvault.bicep' = {
   name: 'deploy-keyvault-${envName}'
   params: {
@@ -99,9 +85,6 @@ module keyvault 'modules/keyvault.bicep' = {
   }
 }
 
-// ==============================================================================
-// 3. Storage Account & Blob Containers
-// ==============================================================================
 module storage 'modules/storage.bicep' = {
   name: 'deploy-storage-${envName}'
   params: {
@@ -110,9 +93,6 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
-// ==============================================================================
-// 4. PostgreSQL Flexible Server
-// ==============================================================================
 module postgres 'modules/postgres.bicep' = {
   name: 'deploy-postgres-${envName}'
   params: {
@@ -123,9 +103,6 @@ module postgres 'modules/postgres.bicep' = {
   }
 }
 
-// ==============================================================================
-// 5. AI Services (Azure AI Document Intelligence)
-// ==============================================================================
 module ai 'modules/ai.bicep' = {
   name: 'deploy-ai-${envName}'
   params: {
@@ -134,9 +111,6 @@ module ai 'modules/ai.bicep' = {
   }
 }
 
-// ==============================================================================
-// 6. Web App (Fullstack Linux Container)
-// ==============================================================================
 module webapp 'modules/webapp.bicep' = {
   name: 'deploy-webapp-${envName}'
   params: {
@@ -155,9 +129,6 @@ module webapp 'modules/webapp.bicep' = {
   }
 }
 
-// ==============================================================================
-// 7. Azure Functions (Document Processor)
-// ==============================================================================
 module functionapp 'modules/functionapp.bicep' = {
   name: 'deploy-functionapp-${envName}'
   dependsOn: [
@@ -175,21 +146,20 @@ module functionapp 'modules/functionapp.bicep' = {
   }
 }
 
-// ==============================================================================
-// 8. Alerts & Action Groups
-// ==============================================================================
 module alerts 'modules/alerts.bicep' = {
   name: 'deploy-alerts-${envName}'
   params: {
     actionGroupName: actionGroupName
     alertEmailAddress: alertEmailAddress
     targetResourceId: webapp.outputs.webAppId
+    functionAppResourceId: functionapp.outputs.functionAppId
+    postgresResourceId: postgres.outputs.postgresId
+    appInsightsId: monitoring.outputs.appInsightsId
+    webAppUrl: webapp.outputs.webAppUrl
+    location: location
   }
 }
 
-// ==============================================================================
-// Outputs
-// ==============================================================================
 output webAppUrl string = webapp.outputs.webAppUrl
 output webAppPrincipalId string = webapp.outputs.webAppPrincipalId
 output functionAppUrl string = functionapp.outputs.functionAppUrl

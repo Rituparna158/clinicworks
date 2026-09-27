@@ -1,6 +1,3 @@
-// ==============================================================================
-// ClinicWorks - PostgreSQL Flexible Server Module
-// ==============================================================================
 param location string
 param serverName string
 param adminUsername string
