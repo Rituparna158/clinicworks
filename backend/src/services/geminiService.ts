@@ -261,11 +261,15 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string, fall
     age = parseInt(ageMatch[1], 10);
   }
 
-  // 2. Detect Patient Name
+  // 2. Detect Patient Name (avoid capturing "Visit Note" or generic headers)
   let name: string | null = null;
-  const nameMatch = text.match(/(?:patient name|patient)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+  const nameMatch = text.match(/patient\s+name[\s:]+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i) ||
+    text.match(/(?:patient)[\s:]+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
   if (nameMatch && nameMatch[1]) {
-    name = nameMatch[1].trim();
+    const candidate = nameMatch[1].trim();
+    if (!candidate.toLowerCase().includes('visit') && !candidate.toLowerCase().includes('note')) {
+      name = candidate;
+    }
   }
 
   // 3. Detect Blood Pressure Readings
@@ -325,10 +329,28 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string, fall
     }
   }
 
+  // 4. Clinical Document Type Classification (including incomplete or non-slash formats)
+  const combinedContext = `${fileName} ${text}`.toLowerCase();
   let detectedType: 'BP' | 'A1C' | 'UNKNOWN' = 'UNKNOWN';
+
   if (bpReadings.length > 0) {
     detectedType = 'BP';
   } else if (hba1cReadings.length > 0) {
+    detectedType = 'A1C';
+  } else if (
+    combinedContext.includes('blood pressure') ||
+    combinedContext.includes('systolic') ||
+    combinedContext.includes('diastolic') ||
+    /(^|[^a-z])bp([^a-z]|$)/i.test(fileName)
+  ) {
+    detectedType = 'BP';
+  } else if (
+    combinedContext.includes('hba1c') ||
+    combinedContext.includes('hemoglobin a1c') ||
+    combinedContext.includes('glycated hemoglobin') ||
+    combinedContext.includes('a1c') ||
+    /(^|[^a-z])a1c([^a-z]|$)/i.test(fileName)
+  ) {
     detectedType = 'A1C';
   }
 
