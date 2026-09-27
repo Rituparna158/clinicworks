@@ -8,8 +8,8 @@ import { isOcrConfigured, performOcrOnPdf } from './ocrService.js';
 dotenv.config();
 
 const GEMINI_API_KEY = process.env['GEMINI_API_KEY'] ?? '';
-const GEMINI_MODEL = process.env['GEMINI_MODEL'] ?? 'gemini-3.5-flash-lite';
-const BACKUP_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest'];
+const GEMINI_MODEL = process.env['GEMINI_MODEL'] ?? 'gemini-3.8-flash';
+const BACKUP_MODELS = ['gemini-3.8-flash'];
 
 const SYSTEM_EXTRACTION_PROMPT = `
 You are an expert clinical document extraction AI specialized in medical records and laboratory reports.

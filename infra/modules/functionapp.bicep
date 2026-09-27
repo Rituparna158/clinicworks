@@ -111,7 +111,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'GEMINI_MODEL'
-          value: 'gemini-3.5-flash-lite'
+          value: 'gemini-3.8-flash'
         }
         {
           name: 'NODE_ENV'
