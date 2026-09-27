@@ -95,16 +95,17 @@ export async function extractClinicalData(input: DocumentProcessingInput): Promi
     } catch {
       // ignore local parse failure
     }
+  }
 
-    if ((!extractedText || extractedText.length < 20) && isOcrConfigured()) {
-      try {
-        console.log(`[OCR] Scanned or image-based PDF detected for "${fileName}". Triggering Azure Document Intelligence OCR...`);
-        extractedText = await performOcrOnPdf(fileBuffer);
-        ocrMethod = 'azure-document-intelligence';
-        console.log(`[OCR] Azure Document Intelligence OCR extracted ${extractedText.length} characters.`);
-      } catch (ocrErr) {
-        console.warn(`[OCR] Azure Document Intelligence OCR notice for "${fileName}":`, ocrErr);
-      }
+  // Trigger Azure Document Intelligence OCR for scanned PDFs, empty PDFs, or image files (PNG/JPG)
+  if ((!extractedText || extractedText.length < 20) && isOcrConfigured()) {
+    try {
+      console.log(`[OCR] Scanned document or image file detected for "${fileName}". Triggering Azure Document Intelligence OCR...`);
+      extractedText = await performOcrOnPdf(fileBuffer);
+      ocrMethod = 'azure-document-intelligence';
+      console.log(`[OCR] Azure Document Intelligence OCR extracted ${extractedText.length} characters.`);
+    } catch (ocrErr) {
+      console.warn(`[OCR] Azure Document Intelligence OCR notice for "${fileName}":`, ocrErr);
     }
   }
 
@@ -267,7 +268,7 @@ export function fallbackClinicalExtractor(buffer: Buffer, fileName: string, fall
     text.match(/(?:patient)[\s:]+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
   if (nameMatch && nameMatch[1]) {
     const candidate = nameMatch[1].trim();
-    if (!candidate.toLowerCase().includes('visit') && !candidate.toLowerCase().includes('note')) {
+    if (!candidate.toLowerCase().includes('visit') && !candidate.toLowerCase().includes('note') && candidate.toLowerCase() !== 'age') {
       name = candidate;
     }
   }
