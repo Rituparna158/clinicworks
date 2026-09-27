@@ -60,12 +60,12 @@ resource cpuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   }
 }
 
-// 3. Web App: Memory Alert (> 80% Memory usage)
+// 3. Web App: Memory Alert (> 1.4 GB / ~80% of B1 1.75 GB RAM)
 resource memoryAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   name: 'alert-app-high-memory'
   location: 'global'
   properties: {
-    description: 'Triggers alert when App Service memory usage exceeds 80%.'
+    description: 'Triggers alert when App Service memory working set exceeds 1.4 GB (~80% of B1 tier).'
     severity: 2
     enabled: true
     scopes: [
@@ -78,10 +78,10 @@ resource memoryAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
       allOf: [
         {
           name: 'Metric1'
-          metricName: 'MemoryPercentage'
+          metricName: 'AverageMemoryWorkingSet'
           metricNamespace: 'Microsoft.Web/sites'
           operator: 'GreaterThan'
-          threshold: 80
+          threshold: 1400000000
           timeAggregation: 'Average'
           criterionType: 'StaticThresholdCriterion'
         }
@@ -183,7 +183,7 @@ resource postgresFailedConnAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
       allOf: [
         {
           name: 'Metric1'
-          metricName: 'failed_connections'
+          metricName: 'connections_failed'
           metricNamespace: 'Microsoft.DBforPostgreSQL/flexibleServers'
           operator: 'GreaterThanOrEqual'
           threshold: 3
@@ -222,7 +222,7 @@ resource exceptionsAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (!emp
           metricNamespace: 'Microsoft.Insights/components'
           operator: 'GreaterThanOrEqual'
           threshold: 5
-          timeAggregation: 'Total'
+          timeAggregation: 'Count'
           criterionType: 'StaticThresholdCriterion'
         }
       ]
@@ -253,13 +253,13 @@ resource healthWebTest 'Microsoft.Insights/webtests@2022-06-15' = if (!empty(app
     RetryEnabled: true
     Locations: [
       {
-        Id: 'apac-sg-sin-edge' // Singapore (SE Asia)
+        Id: 'apac-hk-hkn-azr' // East Asia (Hong Kong)
       }
       {
-        Id: 'emea-gb-db3-azr' // UK West (Europe)
+        Id: 'emea-nl-ams-azr' // West Europe (Amsterdam)
       }
       {
-        Id: 'us-va-ash-azr'   // East US
+        Id: 'us-va-ash-azr'   // East US (Virginia)
       }
     ]
     Configuration: {
